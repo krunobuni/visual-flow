@@ -5,25 +5,47 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(true);
   const intervalRef = useRef();
 
-  const categories = [
-    'abstract art', 'graphic design', 'modern painting', 'street art',
-    'digital illustration', 'pop art', 'minimalist design', 'contemporary art'
+  // Sites de arte que não bloqueiam hotlinking
+  const artSources = [
+    // Wikimedia Commons - milhões de obras de arte
+    () => `https://commons.wikimedia.org/wiki/Special:Random/File?${Date.now()}`,
+    
+    // Museum APIs sem chave
+    () => `https://collectionapi.metmuseum.org/public/collection/v1/objects/${Math.floor(Math.random() * 500000)}`,
+    
+    // Raw images de museus
+    () => `https://images.metmuseum.org/CRDImages/ep/original/EP${Math.floor(100 + Math.random() * 900)}.jpg`,
+    
+    // Imagens do Rijksmuseum
+    () => `https://www.rijksmuseum.nl/api/en/collection/SK-C-5?key=0&format=json&imgonly=true`,
   ];
 
-  const getRandomImage = () => {
-    const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-    return `https://source.unsplash.com/1600x900/?${randomCategory}&t=${Date.now()}`;
+  const getRandomImage = async () => {
+    try {
+      // Tenta várias fontes até uma funcionar
+      for (let source of artSources) {
+        const url = source();
+        const response = await fetch(url, { mode: 'no-cors' });
+        if (response.ok) return url;
+      }
+    } catch (e) {}
+    
+    // Fallback - Unsplash com termos específicos
+    const terms = ['abstract', 'painting', 'design', 'art', 'graphic', 'illustration', 'drawing'];
+    const term = terms[Math.floor(Math.random() * terms.length)];
+    return `https://source.unsplash.com/1600x900/?${term}&t=${Date.now()}`;
   };
 
-  const loadNewImage = () => {
-    setImageUrl(getRandomImage());
+  const loadNewImage = async () => {
+    const newImage = await getRandomImage();
+    setImageUrl(newImage);
   };
 
   useEffect(() => {
     loadNewImage();
     
     if (isPlaying) {
-      intervalRef.current = setInterval(loadNewImage, 10000);
+      intervalRef.current = setInterval(loadNewImage, 5000);
     }
     
     return () => clearInterval(intervalRef.current);
@@ -36,7 +58,7 @@ function App() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `inspiration-${Date.now()}.jpg`;
+      link.download = `art-${Date.now()}.jpg`;
       link.click();
       window.URL.revokeObjectURL(url);
     } catch (error) {
@@ -54,7 +76,7 @@ function App() {
           />
           <img 
             src={imageUrl} 
-            alt="Visual Inspiration"
+            alt="Art"
             className="absolute inset-0 m-auto max-w-full max-h-full object-contain z-10"
             onError={loadNewImage}
           />
